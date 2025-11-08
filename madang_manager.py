@@ -7,7 +7,7 @@ try:
     dbConn = pymysql.connect(
         user='root', 
         passwd='1234', 
-        host='192.168.0.11'
+        host='192.168.0.11',
         db='madang', 
         charset='utf8'
     )
@@ -92,3 +92,4 @@ if len(name) > 0:
                                    tab2.error(f"거래 입력 중 오류 발생: {commit_e}")
               elif price:
                     tab2.warning("금액은 0보다 큰 숫자여야 합니다.")
+
