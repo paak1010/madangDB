@@ -3,11 +3,14 @@ import pymysql
 import pandas as pd
 import time
 
+# --- DB 접속 정보 (공인 IP 적용) ---
+# 🚨🚨🚨 이 부분을 Windows PC의 실제 공인 IP 주소로 교체하세요! 🚨🚨🚨
+# user: madang_user, passwd: madang_user_1234
 try:
     dbConn = pymysql.connect(
         user='madang_user', 
         passwd='madang_user_1234', 
-        host='192.168.0.11',
+        host='211.179.110.120', # <--- 여기에 공인 IP 주소 입력
         db='madang', 
         charset='utf8'
     )
@@ -16,9 +19,10 @@ try:
 
 except Exception as e:
     st.error(f"데이터베이스 연결 실패! 오류: {e}")
-    st.warning("1. 공인 IP 주소가 정확한지 확인하세요.")
-    st.warning("2. Windows 방화벽(3306 포트)이 열려 있는지 확인하세요.")
+    st.warning("1. Host 주소로 **공인 IP**를 사용했는지 확인하세요. (192.168.x.x 주소는 사용할 수 없습니다.)")
+    st.warning("2. Windows 방화벽(3306 포트) 및 VMware NAT 설정이 완벽한지 확인하세요.")
     st.stop()
+# ------------------------------
 
 def query(sql):
        cursor.execute(sql)
@@ -45,15 +49,26 @@ select_book = ""
 if len(name) > 0:
        # 고객 정보 및 거래 내역 조회
        sql = f"select c.custid, c.name, b.bookname, o.orderdate, o.saleprice from Customer c, Book b, Orders o where c.custid = o.custid and o.bookid = b.bookid and name = '{name}';"
-       cursor.execute(sql)
-       result = cursor.fetchall()
        
+       try:
+           cursor.execute(sql)
+           result = cursor.fetchall()
+       except Exception as e:
+           st.error(f"고객 조회 중 오류 발생: {e}")
+           st.stop()
+           
        if not result:
               tab1.warning(f"고객명 '{name}'의 거래 내역을 찾을 수 없습니다.")
               # 거래가 없는 고객의 custid만 찾기
               sql_cust = f"select custid from Customer where name = '{name}'"
-              cursor.execute(sql_cust)
-              cust_result = cursor.fetchone()
+              
+              try:
+                  cursor.execute(sql_cust)
+                  cust_result = cursor.fetchone()
+              except Exception as e:
+                   st.error(f"고객 ID 조회 중 오류 발생: {e}")
+                   st.stop()
+              
               if cust_result:
                   custid = cust_result['custid']
                   tab2.write(f"고객번호: {custid}")
@@ -95,8 +110,5 @@ if len(name) > 0:
                             except Exception as commit_e:
                                    dbConn.rollback()
                                    tab2.error(f"거래 입력 중 오류 발생: {commit_e}")
-                                   # 디버깅을 위해 SQL 오류 메시지를 보여줄 수 있습니다.
-                                   # tab2.code(commit_e)
               elif price:
                     tab2.warning("금액은 0보다 큰 숫자여야 합니다.")
-
