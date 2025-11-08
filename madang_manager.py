@@ -5,7 +5,7 @@ from typing import Optional
 import time
 
 # --- DB 접속 정보 설정 (Secrets.toml 사용) ---
-# Secrets.toml 파일이 반드시 .streamlit/secrets.toml 경로에 있어야 합니다.
+# host, user, passwd 등의 정보를 st.secrets에서 읽어옵니다.
 DB_CONFIG = {
     # host 값은 secrets.toml에서 읽어온 '211.179.110.120' 공인 IP 주소입니다.
     'host': st.secrets["mysql"]["host"], 
@@ -31,7 +31,7 @@ def get_db_connection() -> Optional[pymysql.connections.Connection]:
         st.warning("2. **공유기 포트 포워딩** 및 **Windows 방화벽** 설정을 확인해야 합니다.")
         return None
 
-# --- 데이터 조회 함수 ---
+# --- 데이터 조회 및 입력 관련 함수 ---
 def search_user_orders(name: str, conn: pymysql.connections.Connection) -> tuple[pd.DataFrame, Optional[int]]:
     """사용자 이름을 기준으로 주문 내역을 조회하고 custid를 반환합니다."""
     
@@ -172,3 +172,4 @@ if db_conn:
                         db_conn.rollback()
                         st.error("거래 입력 중 데이터베이스 오류 발생!")
                         st.exception(commit_e)
+```eof
