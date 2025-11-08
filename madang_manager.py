@@ -3,15 +3,11 @@ import pymysql
 import pandas as pd
 import time
 
-# --- DB 접속 정보 (최종 수정 부분) ---
-# 🚨 주의: 'YOUR_PUBLIC_IP_ADDRESS_HERE'를 Windows PC의 실제 공인 IP 주소로 교체하세요!
-# 🚨 주의: 'madang_user_비밀번호'를 실제 비밀번호로 교체하세요!
-
 try:
     dbConn = pymysql.connect(
         user='madang_user', 
-        passwd='madang_user_비밀번호', 
-        host='YOUR_PUBLIC_IP_ADDRESS_HERE', # <--- 여기에 Windows PC의 공인 IP 주소 입력
+        passwd='madang_user_1234', 
+        host='192.168.0.11',
         db='madang', 
         charset='utf8'
     )
@@ -23,7 +19,6 @@ except Exception as e:
     st.warning("1. 공인 IP 주소가 정확한지 확인하세요.")
     st.warning("2. Windows 방화벽(3306 포트)이 열려 있는지 확인하세요.")
     st.stop()
-# ------------------------------
 
 def query(sql):
        cursor.execute(sql)
@@ -104,3 +99,4 @@ if len(name) > 0:
                                    # tab2.code(commit_e)
               elif price:
                     tab2.warning("금액은 0보다 큰 숫자여야 합니다.")
+
