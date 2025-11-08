@@ -4,29 +4,31 @@ import pandas as pd
 from typing import Optional
 import time
 
-# --- 1. DB 접속 정보 설정 (Secrets.toml 사용) ---
-# Secrets 파일에 정의된 정보를 불러옵니다.
+# --- DB 접속 정보 설정 (Secrets.toml 사용) ---
+# Secrets.toml 파일이 반드시 .streamlit/secrets.toml 경로에 있어야 합니다.
 DB_CONFIG = {
-    'host': st.secrets["mysql"]["host"],
+    # host 값은 secrets.toml에서 읽어온 '211.179.110.120' 공인 IP 주소입니다.
+    'host': st.secrets["mysql"]["host"], 
     'user': st.secrets["mysql"]["user"],
     'passwd': st.secrets["mysql"]["passwd"],
     'db': st.secrets["mysql"]["db"],
     'charset': st.secrets["mysql"]["charset"]
 }
 
-@st.cache_resource(ttl=3600)  # DB 연결을 캐시하여 앱 성능 최적화
+@st.cache_resource(ttl=3600)  # DB 연결을 캐시하여 성능 최적화
 def get_db_connection() -> Optional[pymysql.connections.Connection]:
     """데이터베이스 연결을 설정하고 반환합니다."""
     try:
-        # DB_CONFIG에 설정된 정보를 사용하여 접속을 시도합니다.
+        # DB 접속 시도
         conn = pymysql.connect(**DB_CONFIG)
         st.success("데이터베이스 연결 성공!", icon="✅")
         return conn
     except Exception as e:
-        st.error("데이터베이스 연결 오류 발생! [Timed out 오류 예상]", icon="❌")
+        # Timed out 오류 시 포트 포워딩 또는 공인 IP 문제를 안내
+        st.error("데이터베이스 연결 오류 발생! (Timed out 오류 예상)", icon="❌")
         st.error(f"오류 상세: {e}")
-        st.warning("1. Secrets.toml의 host 값이 **공인 IP**인지 확인하세요.")
-        st.warning("2. **공유기 포트 포워딩** 설정이 3306 포트를 허용하는지 확인하세요.")
+        st.warning("1. Secrets.toml의 host 값이 **공인 IP(211.179.110.120)**인지 확인하세요.")
+        st.warning("2. **공유기 포트 포워딩** 및 **Windows 방화벽** 설정을 확인해야 합니다.")
         return None
 
 # --- 데이터 조회 함수 ---
@@ -38,7 +40,7 @@ def search_user_orders(name: str, conn: pymysql.connections.Connection) -> tuple
 
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-            # 1. 주문 내역 조회 (SQL 인젝션 방지를 위해 %s 사용)
+            # 1. 주문 내역 조회 및 custid 확보 (SQL 인젝션 방지)
             sql_orders = """
             SELECT o.custid, c.name, b.bookname, o.saleprice, o.orderdate 
             FROM Customer c, Orders o, Book b
@@ -94,11 +96,10 @@ st.set_page_config(page_title="마당서점 관리", layout="wide")
 st.title("📚 마당서점 고객 및 거래 관리")
 st.markdown("---")
 
-# DB 연결 시도
 db_conn = get_db_connection()
 
 if db_conn:
-    # 도서 목록을 세션 상태에 저장
+    # 도서 목록을 세션 상태에 저장 (캐시된 DB 연결 사용)
     if 'book_list' not in st.session_state:
         st.session_state.book_list = get_all_books(db_conn)
     
@@ -129,7 +130,6 @@ if db_conn:
         
         current_custid = None
         if input_name:
-            # 재조회를 통해 custid 확보
             _, current_custid = search_user_orders(input_name, db_conn)
             
             if current_custid:
@@ -168,11 +168,6 @@ if db_conn:
                         db_conn.commit()
                         st.success(f'✅ 거래가 성공적으로 입력되었습니다! (주문 ID: {new_order_id})')
                         
-                        # 입력 필드 초기화 (필요시)
-                        st.session_state.cust_name_trade = ""
-                        st.session_state.book_select = "-- 도서를 선택하세요 --"
-                        st.session_state.price_input = 100
-
                     except Exception as commit_e:
                         db_conn.rollback()
                         st.error("거래 입력 중 데이터베이스 오류 발생!")
